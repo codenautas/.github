@@ -1,0 +1,51 @@
+name: QA control
+description: check some Codenauta's conventions
+
+on:
+  workflow_call:
+
+jobs:
+
+  check-repository-fullname:
+    runs-on: ubuntu-latest
+    steps:
+
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js 22.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22.x
+
+    - name: Read package.json
+      id: package_json
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+          return packageJson.repository;
+
+    - name: Check repository URL
+      if: steps.package_json.outputs.result
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const expectedRepo = context.repo.owner + '/' + context.repo.repo;
+          let actualRepo = '';
+          const repoValue = ${{ steps.package_json.outputs.result }};
+          if (typeof repoValue === 'string') {
+            // Handle string format: "https://github.com/owner/repo" or "owner/repo"
+             actualRepo = repoValue.replace('https://github.com/', '').replace('.git','');
+          } else if (typeof repoValue === 'object' && repoValue.url) {
+            // Handle object format: { "type": "git", "url": "https://github.com/owner/repo.git" }
+            actualRepo = repoValue.url.replace('https://github.com/', '').replace('.git','');
+          } else {
+            core.setFailed('Invalid repository format in package.json');
+            return;
+          }
+          if (actualRepo !== expectedRepo) {
+            core.setFailed(`package.json repository is incorrect. Expected: ${expectedRepo}, Actual: ${actualRepo}`);
+          } else {
+            console.log(`package.json repository is correct: ${expectedRepo}`);
+          }          

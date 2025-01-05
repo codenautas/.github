@@ -69,12 +69,11 @@ jobs:
           const fs = require('fs');
           const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
           var fullName = packageJson.repository;
-          const readme = fs.readFileSync('./README.md', 'utf8'));
+          const readme = fs.readFileSync('./README.md', 'utf8');
           var expected = `[![build](https://github.com/${fullName}/actions/workflows/node.js.yml/badge.svg)](https://github.com/${fullName}/actions/workflows/node.js.yml)`
           if (!reamde.includes(expected)) {
             core.setFailed(`❌ Missing badget: ${expected}`);
           } else {
             console.log('✅ badget ok')
           }
-          return packageJson.repository;
 

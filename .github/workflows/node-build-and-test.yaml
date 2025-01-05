@@ -2,10 +2,7 @@ name: Node.js CI build and test
 description: Build and test npm node.js repositories in current and LTS. Needs `npm ci` and `npm test` in place
 
 on:
-  push:
-    branches: [ master, main ]
-  pull_request:
-    branches: [ master, main ]
+  workflow_call:
 
 jobs:
   build:

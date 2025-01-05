@@ -45,7 +45,36 @@ jobs:
             return;
           }
           if (actualRepo !== expectedRepo) {
-            core.setFailed(`package.json repository is incorrect. Expected: ${expectedRepo}, Actual: ${actualRepo}`);
+            core.setFailed(`❌ package.json repository is incorrect. Expected: ${expectedRepo}, Actual: ${actualRepo}`);
           } else {
-            console.log(`package.json repository is correct: ${expectedRepo}`);
-          }          
+            console.log(`✅ package.json repository is correct: ${expectedRepo}`);
+          }
+
+  check-build-badge:
+    runs-on: ubuntu-latest
+    steps:
+
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js 22.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22.x
+
+    - name: Read package.json
+      id: package_json
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+          var fullName = packageJson.repository;
+          const readme = fs.readFileSync('./README.md', 'utf8'));
+          var expected = `[![build](https://github.com/${fullName}/actions/workflows/node.js.yml/badge.svg)](https://github.com/${fullName}/actions/workflows/node.js.yml)`
+          if (!reamde.includes(expected)) {
+            core.setFailed(`❌ Missing badget: ${expected}`);
+          } else {
+            console.log('✅ badget ok')
+          }
+          return packageJson.repository;
+

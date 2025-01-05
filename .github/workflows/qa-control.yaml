@@ -61,7 +61,7 @@ jobs:
       with:
         node-version: 22.x
 
-    - name: Read package.json
+    - name: Check build badge in README.md
       id: package_json
       uses: actions/github-script@v6
       with:
@@ -70,7 +70,7 @@ jobs:
           const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
           var fullName = packageJson.repository;
           const readme = fs.readFileSync('./README.md', 'utf8');
-          var expected = `[![build](https://github.com/${fullName}/actions/workflows/node.js.yml/badge.svg)](https://github.com/${fullName}/actions/workflows/node.js.yml)`
+          var expected = `[![build](https://github.com/${fullName}/actions/workflows/node-build-and-test.yml/badge.svg)](https://github.com/${fullName}/actions/workflows/node-build-and-test.yml)`
           if (!readme.includes(expected)) {
             core.setFailed(`❌ Missing badget: ${expected}`);
           } else {

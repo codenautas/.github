@@ -71,7 +71,7 @@ jobs:
           var fullName = packageJson.repository;
           const readme = fs.readFileSync('./README.md', 'utf8');
           var expected = `[![build](https://github.com/${fullName}/actions/workflows/node.js.yml/badge.svg)](https://github.com/${fullName}/actions/workflows/node.js.yml)`
-          if (!reamde.includes(expected)) {
+          if (!readme.includes(expected)) {
             core.setFailed(`❌ Missing badget: ${expected}`);
           } else {
             console.log('✅ badget ok')

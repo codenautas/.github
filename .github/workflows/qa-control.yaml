@@ -70,7 +70,7 @@ jobs:
           const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
           var fullName = packageJson.repository;
           const readme = fs.readFileSync('./README.md', 'utf8');
-          var expected = `[![build](https://github.com/${fullName}/actions/workflows/node-build-and-test.yml/badge.svg)](https://github.com/${fullName}/actions/workflows/node-build-and-test.yml)`
+          var expected = `[![build](https://github.com/${fullName}/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/${fullName}/actions/workflows/build-and-test.yml)`
           if (!readme.includes(expected)) {
             core.setFailed(`❌ Missing badget: ${expected}`);
           } else {

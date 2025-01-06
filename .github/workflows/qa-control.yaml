@@ -72,6 +72,8 @@ jobs:
           const readme = fs.readFileSync('./README.md', 'utf8');
           var expected = `[![build](https://github.com/${fullName}/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/${fullName}/actions/workflows/build-and-test.yml)`
           if (!readme.includes(expected)) {
+            console.error('❌ Missing badget in')
+            console.log(readme);
             core.setFailed(`❌ Missing badget: ${expected}`);
           } else {
             console.log('✅ badget ok')

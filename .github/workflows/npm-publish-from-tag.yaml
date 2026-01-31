@@ -5,6 +5,7 @@ on:
     inputs:
       node_version:
         description: 'Node.js version to use'
+        type: string
         required: false
         default: '24'
 

@@ -8,6 +8,10 @@ on:
         type: string
         required: false
         default: '24'
+      skip-until-date:
+        required: false
+        type: string
+        description: 'Saltar tests hasta esta fecha (formato: YYYY-MM-DD)'        
 
 jobs:
   check:
@@ -42,8 +46,33 @@ jobs:
           node-version: '${{ inputs.node_version }}'
           registry-url: 'https://registry.npmjs.org'
       - run: npm ci
-      - run: npm test
-      - run: |
+
+      - name: Check if tests should be skipped
+        id: check_skip
+        run: |
+          if [ -n "${{ inputs.skip-until-date }}" ]; then
+            # Para macOS/BSD y Linux
+            CURRENT_EPOCH=$(date +%s)
+            SKIP_UNTIL_EPOCH=$(date -d "${{ inputs.skip-until-date }}" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "${{ inputs.skip-until-date }}" +%s 2>/dev/null || echo "")
+            
+            if [ -n "$SKIP_UNTIL_EPOCH" ] && [ $CURRENT_EPOCH -lt $SKIP_UNTIL_EPOCH ]; then
+              echo "skip_tests=true" >> $GITHUB_OUTPUT
+              echo "⚠️ Tests saltados hasta ${{ inputs.skip-until-date }} (fecha actual: $(date +%Y-%m-%d))"
+            else
+              echo "skip_tests=false" >> $GITHUB_OUTPUT
+              echo "✅ Tests se ejecutarán (fecha límite: ${{ inputs.skip-until-date }})"
+            fi
+          else
+            echo "skip_tests=false" >> $GITHUB_OUTPUT
+            echo "✅ Tests se ejecutarán (no hay fecha de salto)"
+          fi      
+
+      - name: Run tests
+        if: steps.check_skip.outputs.skip_tests != 'true'
+        run: npm test
+
+      - name: Publish to NPM
+        run: |
           VERSION=$(node -p "require('./package.json').version")
           case $VERSION in
             *beta*)

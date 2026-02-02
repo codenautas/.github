@@ -8,7 +8,7 @@ on:
         type: string
         required: false
         default: '24'
-      skip-until-date:
+      skip-tests-until-date:
         required: false
         type: string
         description: 'Saltar tests hasta esta fecha (formato: YYYY-MM-DD)'        
@@ -50,17 +50,17 @@ jobs:
       - name: Check if tests should be skipped
         id: check_skip
         run: |
-          if [ -n "${{ inputs.skip-until-date }}" ]; then
+          if [ -n "${{ inputs.skip-tests-until-date }}" ]; then
             # Para macOS/BSD y Linux
             CURRENT_EPOCH=$(date +%s)
-            SKIP_UNTIL_EPOCH=$(date -d "${{ inputs.skip-until-date }}" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "${{ inputs.skip-until-date }}" +%s 2>/dev/null || echo "")
+            SKIP_UNTIL_EPOCH=$(date -d "${{ inputs.skip-tests-until-date }}" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "${{ inputs.skip-tests-until-date }}" +%s 2>/dev/null || echo "")
             
             if [ -n "$SKIP_UNTIL_EPOCH" ] && [ $CURRENT_EPOCH -lt $SKIP_UNTIL_EPOCH ]; then
               echo "skip_tests=true" >> $GITHUB_OUTPUT
-              echo "⚠️ Tests saltados hasta ${{ inputs.skip-until-date }} (fecha actual: $(date +%Y-%m-%d))"
+              echo "⚠️ Tests saltados hasta ${{ inputs.skip-tests-until-date }} (fecha actual: $(date +%Y-%m-%d))"
             else
               echo "skip_tests=false" >> $GITHUB_OUTPUT
-              echo "✅ Tests se ejecutarán (fecha límite: ${{ inputs.skip-until-date }})"
+              echo "✅ Tests se ejecutarán (fecha límite: ${{ inputs.skip-tests-until-date }})"
             fi
           else
             echo "skip_tests=false" >> $GITHUB_OUTPUT

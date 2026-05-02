@@ -28,7 +28,7 @@ jobs:
 
     - name: Check repository URL
       if: steps.package_json.outputs.result
-      uses: actions/github-script@v6
+      uses: actions/github-script@v9
       with:
         script: |
           const expectedRepo = context.repo.owner + '/' + context.repo.repo;
@@ -63,7 +63,7 @@ jobs:
 
     - name: Check build badge in README.md
       id: package_json
-      uses: actions/github-script@v6
+      uses: actions/github-script@v9
       with:
         script: |
           const fs = require('fs');
@@ -72,7 +72,13 @@ jobs:
           const readme = fs.readFileSync('./README.md', 'utf8');
           var expected = `[![build](https://github.com/${fullName}/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/${fullName}/actions/workflows/build-and-test.yml)`
           if (!readme.includes(expected)) {
-            core.setFailed(`❌ Missing badget: ${expected}`);
+            var expected2 = `[![build](https://github.com/${fullName}/actions/workflows/node.js.yml/badge.svg)](https://github.com/${fullName}/actions/workflows/node.js.yml)`
+            if (!readme.includes(expected2)) {
+              core.setFailed(`❌ Missing badget: ${expected2}`);
+              core.setFailed(`❌ OR badget: ${expected}`);
+            } else {
+              console.log('✅ badget ok')
+            }
           } else {
             console.log('✅ badget ok')
           }

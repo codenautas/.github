@@ -4,6 +4,9 @@ description: Build and test npm node.js repositories in current and LTS. Needs `
 on:
   workflow_call:
 
+env:
+  coverage_version: '24.x'
+
 jobs:
   build:
 
@@ -11,7 +14,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [22.x, 24.x, 25.x]
+        node-version: [22.x, 24.x, 26.x]
 
     steps:
     - uses: actions/checkout@v6
@@ -22,24 +25,14 @@ jobs:
         cache: 'npm'
     - run: npm ci
     - run: npm run build --if-present
-    - run: npm test
-
-  coverage:
-
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v6
-    - name: Use Node.js 24.x
-      uses: actions/setup-node@v6
-      with:
-        node-version: 24.x
-        cache: 'npm'
-    - run: npm ci
-    - run: npm run build --if-present
-    - run: npm run test-ci
+    - name: Test
+      if: matrix.node-version != env.coverage_version
+      run: npm test
+    - name: Test with coverage
+      if: matrix.node-version == env.coverage_version
+      run: npm run test-ci
     - name: Coveralls
+      if: matrix.node-version == env.coverage_version
       uses: coverallsapp/github-action@master
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}

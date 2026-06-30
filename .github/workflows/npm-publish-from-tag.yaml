@@ -11,13 +11,16 @@ on:
       skip-tests-until-date:
         required: false
         type: string
-        description: 'Saltar tests hasta esta fecha (formato: YYYY-MM-DD)'        
+        description: 'Saltar tests hasta esta fecha (formato: YYYY-MM-DD)'
+
+env:
+  TRAVIS: 'GHA'
 
 jobs:
   check:
     runs-on: ubuntu-latest
     outputs:
-      status: ${{ steps.success.outputs.ok }}    
+      status: ${{ steps.success.outputs.ok }}
     steps:
       - uses: actions/checkout@v6
       - name: Get package.json version
@@ -34,7 +37,7 @@ jobs:
         run: |
           echo "Good: Versions match. (${{ github.ref }})"
           echo "ok=ok" >> "$GITHUB_OUTPUT"
-  
+
   publish:
     runs-on: ubuntu-latest
     needs: check
@@ -54,7 +57,7 @@ jobs:
             # Para macOS/BSD y Linux
             CURRENT_EPOCH=$(date +%s)
             SKIP_UNTIL_EPOCH=$(date -d "${{ inputs.skip-tests-until-date }}" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "${{ inputs.skip-tests-until-date }}" +%s 2>/dev/null || echo "")
-            
+
             if [ -n "$SKIP_UNTIL_EPOCH" ] && [ $CURRENT_EPOCH -lt $SKIP_UNTIL_EPOCH ]; then
               echo "skip_tests=true" >> $GITHUB_OUTPUT
               echo "⚠️ Tests saltados hasta ${{ inputs.skip-tests-until-date }} (fecha actual: $(date +%Y-%m-%d))"
@@ -65,7 +68,7 @@ jobs:
           else
             echo "skip_tests=false" >> $GITHUB_OUTPUT
             echo "✅ Tests se ejecutarán (no hay fecha de salto)"
-          fi      
+          fi
 
       - name: Run tests
         if: steps.check_skip.outputs.skip_tests != 'true'

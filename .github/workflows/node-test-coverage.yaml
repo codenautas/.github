@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+    - name: Deprecation notice
+      run: echo "::warning title=DEPRECATED::Este workflow está deprecado."
+
     - uses: actions/checkout@v6
 
     - name: Use Node.js 24.x

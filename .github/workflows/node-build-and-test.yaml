@@ -6,6 +6,7 @@ on:
 
 env:
   coverage_version: '24.x'
+  TRAVIS: 'GHA'
 
 jobs:
   build:

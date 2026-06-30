@@ -1,0 +1,8 @@
+# Normalize to LF in the repo on commit; check out with the OS-native EOL.
+* text=auto
+
+.github/workflows/node-build-and-test.yaml text eol=lf
+.github/workflows/qa-control.yaml text eol=lf
+.gitignore text eol=lf
+LICENSE text eol=lf
+README.md text eol=lf

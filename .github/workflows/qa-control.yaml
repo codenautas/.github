@@ -27,3 +27,6 @@ jobs:
         else
           npx qa-control . --repo-is $GITHUB_REPOSITORY
         fi
+
+    - name: npm audit
+      run: npm audit --omit=dev

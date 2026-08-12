@@ -3,6 +3,9 @@
 
 .github/workflows/node-build-and-test.yaml text eol=lf
 .github/workflows/qa-control.yaml text eol=lf
+.github/workflows/npm-publish-new-version.yaml text eol=lf
+.github/workflows/create-new-version.yaml text eol=lf
+.in-each-repo/*.yml text eol=lf
 .gitignore text eol=lf
 LICENSE text eol=lf
 README.md text eol=lf

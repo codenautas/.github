@@ -1,11 +1,8 @@
 @echo off
 setlocal
-if "%~1"=="" (
-  echo Usage: %~nx0 ^<tag^>
-  echo Example: %~nx0 v1
-  exit /b 1
-)
-set "TAG=%~1"
+rem El tag vigente de los shared workflows. Cambiarlo solo en el proximo breaking change.
+rem v1 quedo congelado para los repos que todavia no migraron.
+set "TAG=v2"
 
 git tag -f "%TAG%"
 if errorlevel 1 exit /b 1

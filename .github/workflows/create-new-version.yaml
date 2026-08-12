@@ -1,0 +1,84 @@
+name: Reusable create new version
+description: Sube la versión del package.json en una rama nueva y abre el PR. No crea el tag (eso lo hace npm-publish-new-version).
+
+on:
+  workflow_call:
+    inputs:
+      bump:
+        description: 'major | minor | patch | premajor | preminor | prepatch | prerelease | o una versión específica (1.2.3)'
+        type: string
+        required: true
+      node_version:
+        description: 'Node.js version to use'
+        type: string
+        required: false
+        default: '24'
+      preid:
+        description: 'Identificador para los pre* (beta, alpha, rc). Solo se usa con premajor/preminor/prepatch/prerelease'
+        type: string
+        required: false
+        default: 'beta'
+
+jobs:
+  create-new-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '${{ inputs.node_version }}'
+
+      - name: Bump the version in package.json
+        id: bump
+        run: |
+          case "${{ inputs.bump }}" in
+            premajor|preminor|prepatch|prerelease)
+              PREID="--preid ${{ inputs.preid }}"
+              ;;
+            *)
+              PREID=""
+              ;;
+          esac
+          VERSION=$(npm version "${{ inputs.bump }}" --no-git-tag-version $PREID)
+          echo "version=${VERSION#v}" >> "$GITHUB_OUTPUT"
+          echo "Nueva versión: $VERSION"
+
+      - name: Check that the tag does not exist
+        run: |
+          TAG="v${{ steps.bump.outputs.version }}"
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Error: Tag ($TAG) already exists. La versión $TAG ya fue publicada."
+            exit 1
+          fi
+          echo "Good: Tag ($TAG) is available."
+
+      - name: Commit and push the branch
+        id: push
+        run: |
+          VERSION="${{ steps.bump.outputs.version }}"
+          BRANCH="version/v$VERSION"
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          for FILE in package.json package-lock.json npm-shrinkwrap.json; do
+            if [ -f "$FILE" ]; then git add "$FILE"; fi
+          done
+          git commit -m "v$VERSION"
+          git push origin "$BRANCH"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "Good: v$VERSION commiteado en $BRANCH."
+
+      - name: Create the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.bump.outputs.version }}"
+          gh pr create \
+            --base "${{ github.ref_name }}" \
+            --head "${{ steps.push.outputs.branch }}" \
+            --title "v$VERSION" \
+            --body "Sube la versión a v$VERSION. Al mergear, correr el workflow de publicación a mano."

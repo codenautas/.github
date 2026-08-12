@@ -1,0 +1,16 @@
+name: Publish from tag
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]*'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    uses: codenautas/.github/.github/workflows/npm-publish-new-version.yaml@v2
+    with:
+      node_version: '24'

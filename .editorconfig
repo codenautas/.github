@@ -7,7 +7,7 @@ trim_trailing_whitespace = true
 insert_final_newline = true
 indent_style = space
 
-[.github/workflows/npm-publish-from-tag.yaml]
+[.github/workflows/npm-publish-new-version.yaml]
 trim_trailing_whitespace = false
 
 [.github/workflows/npm-publish.yaml]

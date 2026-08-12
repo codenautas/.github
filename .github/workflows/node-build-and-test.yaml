@@ -5,7 +5,7 @@ on:
   workflow_call:
 
 env:
-  coverage_version: '24.x'
+  coverage_version: '26.x'
   TRAVIS: 'GHA'
 
 jobs:
@@ -15,12 +15,12 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [22.x, 24.x, 26.x]
+        node-version: [22.x, 24.x, 26.x, 27.x]
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@v7
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'

@@ -13,12 +13,12 @@ jobs:
     - name: Deprecation notice
       run: echo "::warning title=DEPRECATED::Este workflow está deprecado."
 
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
-    - name: Use Node.js 24.x
-      uses: actions/setup-node@v6
+    - name: Use Node.js 26.x
+      uses: actions/setup-node@v7
       with:
-        node-version: 24.x
+        node-version: 26.x
 
     - name: npm install, make test-coverage
       run: |

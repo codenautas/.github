@@ -60,7 +60,7 @@ jobs:
         id: push
         run: |
           VERSION="${{ steps.bump.outputs.version }}"
-          BRANCH="version/v$VERSION"
+          BRANCH="version/v$VERSION-${{ github.run_id }}"
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
           git checkout -b "$BRANCH"

@@ -303,4 +303,3 @@ secret in every repository.
 The commits and tags created by these workflows are attributed to whoever triggered
 them, using `github.actor` and the GitHub `noreply` address. The real email is not used
 because GitHub does not expose it in the Actions context.
-

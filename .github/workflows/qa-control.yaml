@@ -60,6 +60,7 @@ jobs:
         fi
 
   osv:
+    if: ${{ github.event.repository.visibility == 'public' }}
     uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.5.0
     with:
       fail-on-vuln: false

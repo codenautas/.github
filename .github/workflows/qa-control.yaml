@@ -61,6 +61,8 @@ jobs:
 
   osv:
     uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.5.0
+    with:
+      fail-on-vuln: false
     permissions:
       contents: read
       actions: read

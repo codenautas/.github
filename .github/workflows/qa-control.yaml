@@ -1,26 +1,33 @@
 name: QA control
-description: Run qa-control on the project. Needs `npm ci` in place.
-
+description: Run qa-control and security checks on the project. Needs `npm ci` in place.
 on:
   workflow_call:
-
+    inputs:
+      audit-level:
+        type: string
+        default: high
 jobs:
-
   qa:
     runs-on: ubuntu-latest
     steps:
-
     - uses: actions/checkout@v7
-
     - name: Use Node.js 24.x
       uses: actions/setup-node@v7
       with:
         node-version: 24.x
         cache: 'npm'
+    - name: npm ci
+      id: install
+      run: npm ci
 
-    - run: npm ci
+    - name: npm audit
+      id: audit
+      if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+      run: npm audit --omit=dev --audit-level=${{ inputs.audit-level }}
 
-    - name: Run QA control
+    - name: qa-control
+      id: qacontrol
+      if: ${{ !cancelled() && steps.install.outcome == 'success' }}
       run: |
         if [ -f bin/qa-control-run.js ]; then
           node bin/qa-control-run.js . --repo-is $GITHUB_REPOSITORY
@@ -28,5 +35,33 @@ jobs:
           npx qa-control . --repo-is $GITHUB_REPOSITORY
         fi
 
-    - name: npm audit
-      run: npm audit --omit=dev
+    - name: Resumen
+      if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+      run: |
+        {
+          echo "### Results"
+          echo ""
+          echo "| Control | Status |"
+          echo "| --- | :---: |"
+          echo "| vulnerable dependencies (npm audit, level ${{ inputs.audit-level }}) | ${{ steps.audit.outcome  }} |"
+          echo "| dev conventions (qa-control) | ${{ steps.qacontrol.outcome }} |"
+          echo ""
+        } >> "$GITHUB_STEP_SUMMARY"
+        if [ "${{ steps.audit.outcome }}" != "success" ]; then
+          {
+            echo "<details><summary>npm audit</summary>"
+            echo ""
+            echo '```'
+            npm audit --omit=dev || true
+            echo '```'
+            echo ""
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+  osv:
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.5.0
+    permissions:
+      contents: read
+      actions: read
+      security-events: write

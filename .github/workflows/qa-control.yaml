@@ -68,3 +68,20 @@ jobs:
       contents: read
       actions: read
       security-events: write
+
+  report:
+    needs: [qa, osv]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Report of vulnerabilies
+      if: ${{ needs.osv.result != 'success' }}
+      run: |
+        echo "::error title=Vulnerable Dependencies::OSV found vulnerabilities. More details here, on 'osv' step."
+        {
+          echo "## Dependencias vulnerables"
+          echo ""
+          echo "OSV encontró vulnerabilidades. El detalle está en el job **osv** de este run"
+          echo "y en **Security → Code scanning** del repositorio."
+          echo ""
+        } >> "$GITHUB_STEP_SUMMARY"

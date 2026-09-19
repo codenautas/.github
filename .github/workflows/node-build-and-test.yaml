@@ -15,13 +15,45 @@ env:
   TRAVIS: 'GHA'
 
 jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      node-versions: ${{ steps.filter.outputs.node-versions }}
+    steps:
+    - uses: actions/checkout@v7
+    - name: Filtrar las versiones que no acepta engines.node
+      id: filter
+      env:
+        all_versions: '22.x 24.x 26.x'
+      run: |
+        node -e '
+          const path = require("path");
+          const nodeDir = path.dirname(process.execPath);
+          const npmModules = [
+            path.join(nodeDir, "..", "lib", "node_modules", "npm", "node_modules"),
+            path.join(nodeDir, "node_modules", "npm", "node_modules"),
+          ];
+          const semver = require(require.resolve("semver", {paths: npmModules}));
+          const all = process.env.all_versions.split(" ");
+          const engines = require("./package.json").engines?.node;
+          const kept = engines ? all.filter(v => semver.intersects(v, engines)) : all;
+          if (!kept.length) {
+            console.error(`Error: engines.node (${engines}) no acepta ninguna de las versiones de la matriz (${all.join(", ")}).`);
+            process.exit(1);
+          }
+          console.log(`engines.node: ${engines ?? "(no declarado)"} -> se prueba en: ${kept.join(", ")}`);
+          require("fs").appendFileSync(process.env.GITHUB_OUTPUT, `node-versions=${JSON.stringify(kept)}\n`);
+        '
+
   build:
+
+    needs: matrix
 
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        node-version: [22.x, 24.x, 26.x]
+        node-version: ${{ fromJSON(needs.matrix.outputs.node-versions) }}
 
     steps:
     - uses: actions/checkout@v7

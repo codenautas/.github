@@ -3,9 +3,15 @@ description: Build and test npm node.js repositories in current and LTS. Needs `
 
 on:
   workflow_call:
+    inputs:
+      coverage_version:
+        description: 'Version de node en la que se corre test-ci y se reporta coverage'
+        type: string
+        required: false
+        default: '26.x'
 
 env:
-  coverage_version: '26.x'
+  coverage_version: ${{ inputs.coverage_version }}
   TRAVIS: 'GHA'
 
 jobs:

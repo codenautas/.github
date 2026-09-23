@@ -4,11 +4,16 @@ description: Build and test npm node.js repositories in current and LTS. Needs `
 on:
   workflow_call:
     inputs:
-      coverage_version:
-        description: 'Version de node en la que se corre test-ci y se reporta coverage'
+      test_versions:
+        description: 'Versiones sobre las cuales testear ej: "22.x 24.x 26.x". Vacío: las predeterminadas. ''no'': no correr los tests (igual se hace el build en coverage_version)'
         type: string
         required: false
-        default: '26.x'
+        default: ''
+      coverage_version:
+        description: 'Version de node en la que se corre test-ci y se reporta coverage. Tiene que figurar en la lista de versiones testeadas'
+        type: string
+        required: false
+        default: ''
       postgres:
         description: "PostgreSQL para los tests, accesible con las variables PG*. Vacío o 'no': sin PostgreSQL. 'lts': el que viene instalado en el runner. Otro valor: esa versión de la imagen oficial de Docker (por ejemplo '17')"
         type: string
@@ -16,7 +21,7 @@ on:
         default: ''
 
 env:
-  coverage_version: ${{ inputs.coverage_version }}
+  coverage_version: ${{ inputs.coverage_version || '26.x' }}
   TRAVIS: 'GHA'
 
 jobs:
@@ -24,12 +29,14 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       node-versions: ${{ steps.filter.outputs.node-versions }}
+      run-tests: ${{ steps.filter.outputs.run-tests }}
     steps:
     - uses: actions/checkout@v7
     - name: Filtrar las versiones que no acepta engines.node
       id: filter
       env:
         all_versions: '22.x 24.x 26.x'
+        test_versions: ${{ inputs.test_versions }}
       run: |
         node -e '
           const path = require("path");
@@ -39,15 +46,29 @@ jobs:
             path.join(nodeDir, "node_modules", "npm", "node_modules"),
           ];
           const semver = require(require.resolve("semver", {paths: npmModules}));
-          const all = process.env.all_versions.split(" ");
+          const output = (name, value) => require("fs").appendFileSync(process.env.GITHUB_OUTPUT, `${name}=${value}\n`);
+          const coverage_version = process.env.coverage_version;
+          if (process.env.test_versions == "no") {
+            console.log(`test_versions: no -> no se corren los tests, solo el build en: ${coverage_version}`);
+            output("node-versions", JSON.stringify([coverage_version]));
+            output("run-tests", "no");
+            process.exit(0);
+          }
+          const version_list = process.env.test_versions || process.env.all_versions;
+          const all = version_list.split(" ");
           const engines = require("./package.json").engines?.node;
           const kept = engines ? all.filter(v => semver.intersects(v, engines)) : all;
           if (!kept.length) {
             console.error(`Error: engines.node (${engines}) no acepta ninguna de las versiones de la matriz (${all.join(", ")}).`);
             process.exit(1);
           }
+          if (!kept.includes(coverage_version)) {
+            console.error(`Error: coverage_version (${coverage_version}) no figura entre las versiones que se testean (${kept.join(", ")}).`);
+            process.exit(1);
+          }
           console.log(`engines.node: ${engines ?? "(no declarado)"} -> se prueba en: ${kept.join(", ")}`);
-          require("fs").appendFileSync(process.env.GITHUB_OUTPUT, `node-versions=${JSON.stringify(kept)}\n`);
+          output("node-versions", JSON.stringify(kept));
+          output("run-tests", "si");
         '
 
   build:
@@ -96,13 +117,13 @@ jobs:
     - run: npm ci
     - run: npm run build --if-present
     - name: Test
-      if: matrix.node-version != env.coverage_version
+      if: needs.matrix.outputs.run-tests == 'si' && matrix.node-version != env.coverage_version
       run: npm test
     - name: Test with coverage
-      if: matrix.node-version == env.coverage_version
+      if: needs.matrix.outputs.run-tests == 'si' && matrix.node-version == env.coverage_version
       run: npm run test-ci
     - name: Coveralls
-      if: matrix.node-version == env.coverage_version
+      if: needs.matrix.outputs.run-tests == 'si' && matrix.node-version == env.coverage_version
       uses: coverallsapp/github-action@master
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}

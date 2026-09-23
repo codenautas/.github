@@ -9,6 +9,11 @@ on:
         type: string
         required: false
         default: '26.x'
+      postgres:
+        description: "PostgreSQL para los tests, accesible con las variables PG*. Vacío o 'no': sin PostgreSQL. 'lts': el que viene instalado en el runner. Otro valor: esa versión de la imagen oficial de Docker (por ejemplo '17')"
+        type: string
+        required: false
+        default: ''
 
 env:
   coverage_version: ${{ inputs.coverage_version }}
@@ -62,6 +67,32 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
+    - name: Start PostgreSQL
+      if: inputs.postgres != '' && inputs.postgres != 'no'
+      env:
+        postgres_version: ${{ inputs.postgres }}
+      run: |
+        if [ "$postgres_version" = "lts" ]; then
+          sudo systemctl start postgresql.service
+          pg_isready --timeout=30
+          sudo -u postgres psql -v ON_ERROR_STOP=1 \
+            -c "create role test_super login superuser password 'super_pass'" \
+            -c "create database test_db owner test_super"
+        else
+          docker run --detach --publish 5432:5432 --env POSTGRES_USER=test_super --env POSTGRES_PASSWORD=super_pass --env POSTGRES_DB=test_db "postgres:$postgres_version"
+          for attempt in $(seq 1 60); do pg_isready --host=localhost --quiet && break; sleep 1; done
+        fi
+        PGPASSWORD=super_pass psql --host=localhost --username=test_super --dbname=test_db -v ON_ERROR_STOP=1 \
+          -c "create role test_user login password 'test_pass'" \
+          -c "grant all on database test_db to test_user" \
+          -c "grant pg_read_server_files to test_user"
+        PGPASSWORD=test_pass psql --host=localhost --username=test_user --dbname=test_db --command='select version()'
+        {
+          echo "PGHOST=localhost"
+          echo "PGUSER=test_user"
+          echo "PGPASSWORD=test_pass"
+          echo "PGDATABASE=test_db"
+        } >> "$GITHUB_ENV"
     - run: npm ci
     - run: npm run build --if-present
     - name: Test

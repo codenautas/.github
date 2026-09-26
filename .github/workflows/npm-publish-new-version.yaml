@@ -4,14 +4,19 @@ on:
   workflow_call:
     inputs:
       node_version:
-        description: 'Node.js version to use'
+        description: 'Version de node con la que se testea y se publica, en formato de matriz (ej: "24.x")'
+        type: string
+        required: true
+      publish_without_testing:
+        description: 'Publicar sin correr los tests (el build se hace igual)'
+        type: boolean
+        required: false
+        default: false
+      postgres:
+        description: "PostgreSQL para los tests, accesible con las variables PG*. Vacío o 'no': sin PostgreSQL. 'lts': el que viene instalado en el runner. Otro valor: esa versión de la imagen oficial de Docker (por ejemplo '17')"
         type: string
         required: false
-        default: '26'
-      skip-tests-until-date:
-        required: false
-        type: string
-        description: 'Saltar tests hasta esta fecha (formato: YYYY-MM-DD)'
+        default: ''
       create-tag:
         required: false
         type: boolean
@@ -66,9 +71,19 @@ jobs:
           echo "Good: Versions match. (${{ github.ref }})"
           echo "ok=ok" >> "$GITHUB_OUTPUT"
 
+  test:
+    needs: check
+    if: needs.check.outputs.status == 'ok'
+    uses: ./.github/workflows/node-build-and-test.yaml
+    with:
+      node_versions: ${{ inputs.node_version }}
+      skip_tests: ${{ inputs.publish_without_testing }}
+      coverage_version: 'no'
+      postgres: ${{ inputs.postgres }}
+
   publish:
     runs-on: ubuntu-latest
-    needs: check
+    needs: [check, test]
     if: needs.check.outputs.status == 'ok'
     steps:
       - uses: actions/checkout@v7
@@ -79,30 +94,6 @@ jobs:
       - run: npm ci
 
       - run: npm run build --if-present
-
-      - name: Check if tests should be skipped
-        id: check_skip
-        run: |
-          if [ -n "${{ inputs.skip-tests-until-date }}" ]; then
-            # Para macOS/BSD y Linux
-            CURRENT_EPOCH=$(date +%s)
-            SKIP_UNTIL_EPOCH=$(date -d "${{ inputs.skip-tests-until-date }}" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "${{ inputs.skip-tests-until-date }}" +%s 2>/dev/null || echo "")
-
-            if [ -n "$SKIP_UNTIL_EPOCH" ] && [ $CURRENT_EPOCH -lt $SKIP_UNTIL_EPOCH ]; then
-              echo "skip_tests=true" >> $GITHUB_OUTPUT
-              echo "⚠️ Tests saltados hasta ${{ inputs.skip-tests-until-date }} (fecha actual: $(date +%Y-%m-%d))"
-            else
-              echo "skip_tests=false" >> $GITHUB_OUTPUT
-              echo "✅ Tests se ejecutarán (fecha límite: ${{ inputs.skip-tests-until-date }})"
-            fi
-          else
-            echo "skip_tests=false" >> $GITHUB_OUTPUT
-            echo "✅ Tests se ejecutarán (no hay fecha de salto)"
-          fi
-
-      - name: Run tests
-        if: steps.check_skip.outputs.skip_tests != 'true'
-        run: npm test
 
       - name: Publish to NPM
         run: |

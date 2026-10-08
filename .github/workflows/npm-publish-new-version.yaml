@@ -34,6 +34,18 @@ jobs:
     outputs:
       status: ${{ steps.success.outputs.ok }}
     steps:
+      - name: Check that the manual publish runs from the default branch
+        if: inputs.create-tag
+        env:
+          REF: ${{ github.ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [ "$REF" != "refs/heads/$DEFAULT_BRANCH" ]; then
+            echo "Error: Solo se puede publicar manualmente desde $DEFAULT_BRANCH. Se disparó desde ($REF)."
+            exit 1
+          fi
+          echo "Good: Running from $DEFAULT_BRANCH."
+
       - uses: actions/checkout@v7
       - name: Get package.json version
         id: get_package_version

@@ -46,12 +46,30 @@ $ advance-tag.bat
 
 ### `node-build-and-test.yaml`
 
-Builds and runs the tests on a matrix of Node versions (22, 24 and 26). On the version
-marked as `coverage_version` (24) it runs `npm run test-ci` instead of `npm test` and
-sends the result to Coveralls.
+Builds and runs the tests on a matrix of Node versions (22, 24 and 26 by default). On
+the version marked as `coverage_version` (26 by default) it runs `npm run test-ci`
+instead of `npm test` and sends the result to Coveralls.
+
+Before building the matrix it drops the versions not accepted by `engines.node` in
+`package.json`. If none is left, or if `coverage_version` is not among the remaining
+ones, it fails.
 
 It needs the repository to have working `npm ci` and `npm test`. The build step uses
 `--if-present`, so it is optional.
+
+Inputs:
+
+- `node_versions` — defaults to empty (`22.x 24.x 26.x`). Node versions separated by
+  spaces, for example `22.x 24.x 26.x`.
+- `skip_tests` — defaults to `false`. Does not run the tests (the build is still done
+  on every version).
+- `coverage_version` — defaults to empty (`26.x`). Node version on which `test-ci` is
+  run and coverage is reported. It must be listed in `node_versions`. `no`: no
+  coverage (`npm test` runs on all of them).
+- `postgres` — defaults to empty. PostgreSQL for the tests, reachable through the
+  `PG*` variables. Empty or `no`: no PostgreSQL. `lts`: the one installed in the
+  runner. Any other value: that version of the official Docker image (for example
+  `17`).
 
 
 ### `qa-control.yaml`
@@ -92,7 +110,8 @@ triggered by pushing a tag, and before publishing it checks that the tag matches
 
 **Manual** (`create-tag: true`). There is no previous tag: it takes the version from
 `package.json`, checks that such tag does not exist yet and creates it. If the tag
-already exists it fails — that version was already published.
+already exists it fails — that version was already published. It can only be run from
+the repository's default branch; from any other branch, it fails.
 
 In both cases the publishing step is the same: `npm ci`, build, tests and
 `npm publish --provenance`. The npm dist-tag comes from the version suffix: those
@@ -100,11 +119,15 @@ containing `beta`, `alpha` or `rc` are published under that tag instead of `late
 
 Inputs:
 
+- `node_version` — required. Node version used to test and publish, in matrix format
+  (for example `24.x`).
+- `publish_without_testing` — defaults to `false`. Publishes without running the tests
+  (the build is still done).
+- `postgres` — defaults to empty. PostgreSQL for the tests, reachable through the
+  `PG*` variables. Empty or `no`: no PostgreSQL. `lts`: the one installed in the
+  runner. Any other value: that version of the official Docker image (for example
+  `17`).
 - `create-tag` — defaults to `false`.
-- `node_version` — defaults to `24`.
-- `skip-tests-until-date` — skips the tests until a given date (`YYYY-MM-DD`). It is
-  an escape hatch for when something has to be published with broken tests for a known
-  reason and with an expiration date.
 
 
 ## Deprecated workflows
@@ -128,8 +151,10 @@ There are two paths. Both end up in the same place.
 1. **Run `Create new version`** from the Actions tab, choosing the version type. It
    leaves a pull request open with the updated `package.json`.
 2. **Merge that pull request** with the GitHub button.
-3. **Run `Publish (manual)`** from Actions. It creates the tag from the `package.json`
-   version and publishes.
+3. **Run `Publish`** from Actions. It creates the tag from the `package.json`
+   version and publishes. In *Use workflow from* the main branch (`main` or `master`)
+   must be chosen, not the `version/...` branch created by `Create new version`: from
+   any other branch, it fails.
 
 ### From the local machine
 
@@ -166,6 +191,11 @@ on:
 jobs:
   ci:
     uses: codenautas/.github/.github/workflows/node-build-and-test.yaml@v2
+    with:
+      node_versions: ''
+      skip_tests: false
+      postgres: ''
+      coverage_version: ''
 ```
 
 
@@ -180,6 +210,13 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  schedule:
+    - cron: '20 20 * * 5'
+
+permissions:
+  contents: read
+  actions: read
+  security-events: write
 
 jobs:
   qa:
@@ -189,40 +226,29 @@ jobs:
 
 ### `publish.yml`
 
-The usual one: triggered by pushing a tag.
+It is triggered in two ways: by pushing a tag (by-tag mode) or by hand from Actions
+(manual mode, which creates the tag and can only be run from the main branch). It
+needs `contents: write` to be able to create the tag in manual mode.
+
+It is a single file for both modes because npm accepts only one workflow as *Trusted
+Publisher* per package, and identifies it by the name of the file that calls the
+shared workflow.
 
 
 ```yaml
-name: Publish from tag
+name: Publish
 
 on:
   push:
     tags:
       - 'v[0-9]+.[0-9]*'
-
-permissions:
-  id-token: write
-  contents: read
-
-jobs:
-  publish:
-    uses: codenautas/.github/.github/workflows/npm-publish-new-version.yaml@v2
-    with:
-      node_version: '24'
-```
-
-
-### `publish-manual.yml`
-
-The same shared workflow, but triggered by hand and creating the tag. It needs
-`contents: write` precisely to be able to create it.
-
-
-```yaml
-name: Publish (manual)
-
-on:
   workflow_dispatch:
+    inputs:
+      publish_without_testing:
+        description: 'Publicar sin correr los tests'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   id-token: write
@@ -232,8 +258,10 @@ jobs:
   publish:
     uses: codenautas/.github/.github/workflows/npm-publish-new-version.yaml@v2
     with:
-      node_version: '24'
-      create-tag: true
+      node_version: '24.x'
+      publish_without_testing: ${{ inputs.publish_without_testing == true }}
+      postgres: ''
+      create-tag: ${{ github.event_name == 'workflow_dispatch' }}
 ```
 
 
@@ -271,7 +299,7 @@ jobs:
     with:
       bump: ${{ inputs.bump }}
       preid: ${{ inputs.preid }}
-      node_version: '24'
+      node_version: '24.x'
 ```
 
 
@@ -303,3 +331,4 @@ secret in every repository.
 The commits and tags created by these workflows are attributed to whoever triggered
 them, using `github.actor` and the GitHub `noreply` address. The real email is not used
 because GitHub does not expose it in the Actions context.
+

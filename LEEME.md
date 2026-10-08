@@ -90,12 +90,29 @@ $ advance-tag.bat
 
 ### `node-build-and-test.yaml`
 
-Compila y corre los tests en una matriz de versiones de Node (22, 24 y 26). En la
-versión marcada como `coverage_version` (24) corre `npm run test-ci` en vez de
-`npm test` y manda el resultado a Coveralls.
+Compila y corre los tests en una matriz de versiones de Node (por omisión 22, 24 y
+26). En la versión marcada como `coverage_version` (por omisión 26) corre
+`npm run test-ci` en vez de `npm test` y manda el resultado a Coveralls.
+
+Antes de armar la matriz quita las versiones que no acepta `engines.node` del
+`package.json`. Si no queda ninguna, o si `coverage_version` no está entre las que
+quedan, falla.
 
 Necesita que el repositorio tenga `npm ci` y `npm test` funcionando. El paso de build
 usa `--if-present`, así que es opcional.
+
+Parámetros:
+
+- `node_versions` — por omisión vacío (`22.x 24.x 26.x`). Versiones de Node separadas
+  por espacios, por ejemplo `22.x 24.x 26.x`.
+- `skip_tests` — por omisión `false`. No corre los tests (el build se hace igual en
+  todas las versiones).
+- `coverage_version` — por omisión vacío (`26.x`). Versión de Node en la que se corre
+  `test-ci` y se reporta coverage. Tiene que figurar en `node_versions`. `no`: sin
+  coverage (se corre `npm test` en todas).
+- `postgres` — por omisión vacío. PostgreSQL para los tests, accesible con las
+  variables `PG*`. Vacío o `no`: sin PostgreSQL. `lts`: el que viene instalado en el
+  runner. Otro valor: esa versión de la imagen oficial de Docker (por ejemplo `17`).
 
 <!--lang:en--]
 
@@ -103,12 +120,30 @@ usa `--if-present`, así que es opcional.
 
 ### `node-build-and-test.yaml`
 
-Builds and runs the tests on a matrix of Node versions (22, 24 and 26). On the version
-marked as `coverage_version` (24) it runs `npm run test-ci` instead of `npm test` and
-sends the result to Coveralls.
+Builds and runs the tests on a matrix of Node versions (22, 24 and 26 by default). On
+the version marked as `coverage_version` (26 by default) it runs `npm run test-ci`
+instead of `npm test` and sends the result to Coveralls.
+
+Before building the matrix it drops the versions not accepted by `engines.node` in
+`package.json`. If none is left, or if `coverage_version` is not among the remaining
+ones, it fails.
 
 It needs the repository to have working `npm ci` and `npm test`. The build step uses
 `--if-present`, so it is optional.
+
+Inputs:
+
+- `node_versions` — defaults to empty (`22.x 24.x 26.x`). Node versions separated by
+  spaces, for example `22.x 24.x 26.x`.
+- `skip_tests` — defaults to `false`. Does not run the tests (the build is still done
+  on every version).
+- `coverage_version` — defaults to empty (`26.x`). Node version on which `test-ci` is
+  run and coverage is reported. It must be listed in `node_versions`. `no`: no
+  coverage (`npm test` runs on all of them).
+- `postgres` — defaults to empty. PostgreSQL for the tests, reachable through the
+  `PG*` variables. Empty or `no`: no PostgreSQL. `lts`: the one installed in the
+  runner. Any other value: that version of the official Docker image (for example
+  `17`).
 
 [!--lang:es-->
 
@@ -182,7 +217,8 @@ coincida con la versión del `package.json`. Si no coinciden, falla.
 
 **Manual** (`create-tag: true`). No hay tag previo: toma la versión del `package.json`,
 verifica que ese tag no exista todavía y lo crea. Si el tag ya existe, falla — esa
-versión ya se publicó.
+versión ya se publicó. Solo se puede correr desde la rama por defecto del repositorio;
+desde otra rama, falla.
 
 En los dos casos el paso de publicación es el mismo: `npm ci`, build, tests y
 `npm publish --provenance`. El *dist-tag* de npm sale del sufijo de la versión: las
@@ -190,11 +226,14 @@ que contienen `beta`, `alpha` o `rc` se publican bajo ese tag en vez de `latest`
 
 Parámetros:
 
+- `node_version` — obligatorio. Versión de Node con la que se testea y se publica, en
+  formato de matriz (por ejemplo `24.x`).
+- `publish_without_testing` — por omisión `false`. Publica sin correr los tests (el
+  build se hace igual).
+- `postgres` — por omisión vacío. PostgreSQL para los tests, accesible con las
+  variables `PG*`. Vacío o `no`: sin PostgreSQL. `lts`: el que viene instalado en el
+  runner. Otro valor: esa versión de la imagen oficial de Docker (por ejemplo `17`).
 - `create-tag` — por omisión `false`.
-- `node_version` — por omisión `24`.
-- `skip-tests-until-date` — saltea los tests hasta una fecha dada (`YYYY-MM-DD`).
-  Es una válvula de escape para cuando hay que publicar con tests rotos por una causa
-  conocida y con fecha de vencimiento.
 
 <!--lang:en--]
 
@@ -208,7 +247,8 @@ triggered by pushing a tag, and before publishing it checks that the tag matches
 
 **Manual** (`create-tag: true`). There is no previous tag: it takes the version from
 `package.json`, checks that such tag does not exist yet and creates it. If the tag
-already exists it fails — that version was already published.
+already exists it fails — that version was already published. It can only be run from
+the repository's default branch; from any other branch, it fails.
 
 In both cases the publishing step is the same: `npm ci`, build, tests and
 `npm publish --provenance`. The npm dist-tag comes from the version suffix: those
@@ -216,11 +256,15 @@ containing `beta`, `alpha` or `rc` are published under that tag instead of `late
 
 Inputs:
 
+- `node_version` — required. Node version used to test and publish, in matrix format
+  (for example `24.x`).
+- `publish_without_testing` — defaults to `false`. Publishes without running the tests
+  (the build is still done).
+- `postgres` — defaults to empty. PostgreSQL for the tests, reachable through the
+  `PG*` variables. Empty or `no`: no PostgreSQL. `lts`: the one installed in the
+  runner. Any other value: that version of the official Docker image (for example
+  `17`).
 - `create-tag` — defaults to `false`.
-- `node_version` — defaults to `24`.
-- `skip-tests-until-date` — skips the tests until a given date (`YYYY-MM-DD`). It is
-  an escape hatch for when something has to be published with broken tests for a known
-  reason and with an expiration date.
 
 [!--lang:es-->
 
@@ -260,8 +304,10 @@ Hay dos caminos. Los dos terminan en el mismo lugar.
 1. **Correr `Create new version`** desde la solapa Actions, eligiendo el tipo de
    versión. Deja abierto un *pull request* con el `package.json` actualizado.
 2. **Mergear ese pull request** con el botón de GitHub.
-3. **Correr `Publish (manual)`** desde Actions. Crea el tag a partir de la versión del
-   `package.json` y publica.
+3. **Correr `Publish`** desde Actions. Crea el tag a partir de la versión del
+   `package.json` y publica. En *Use workflow from* hay que elegir la rama principal
+   (`main` o `master`), no la rama `version/...` que creó `Create new version`: desde
+   cualquier otra rama, falla.
 
 ### Desde la máquina local
 
@@ -276,8 +322,10 @@ There are two paths. Both end up in the same place.
 1. **Run `Create new version`** from the Actions tab, choosing the version type. It
    leaves a pull request open with the updated `package.json`.
 2. **Merge that pull request** with the GitHub button.
-3. **Run `Publish (manual)`** from Actions. It creates the tag from the `package.json`
-   version and publishes.
+3. **Run `Publish`** from Actions. It creates the tag from the `package.json`
+   version and publishes. In *Use workflow from* the main branch (`main` or `master`)
+   must be chosen, not the `version/...` branch created by `Create new version`: from
+   any other branch, it fails.
 
 ### From the local machine
 
@@ -333,6 +381,11 @@ on:
 jobs:
   ci:
     uses: codenautas/.github/.github/workflows/node-build-and-test.yaml@v2
+    with:
+      node_versions: ''
+      skip_tests: false
+      postgres: ''
+      coverage_version: ''
 ```
 
 <!--lang:es-->
@@ -353,6 +406,13 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  schedule:
+    - cron: '20 20 * * 5'
+
+permissions:
+  contents: read
+  actions: read
+  security-events: write
 
 jobs:
   qa:
@@ -363,56 +423,42 @@ jobs:
 
 ### `publish.yml`
 
-El de siempre: lo dispara el *push* de un tag.
+Se dispara de dos maneras: con el *push* de un tag (modo por tag) o a mano desde
+Actions (modo manual, que crea el tag y solo se puede correr desde la rama principal).
+Necesita `contents: write` para poder crear el tag en el modo manual.
+
+Es un único archivo para los dos modos porque npm acepta un solo workflow como
+*Trusted Publisher* por paquete, y lo identifica por el nombre del archivo que llama al
+workflow compartido.
 
 <!--lang:en--]
 
 ### `publish.yml`
 
-The usual one: triggered by pushing a tag.
+It is triggered in two ways: by pushing a tag (by-tag mode) or by hand from Actions
+(manual mode, which creates the tag and can only be run from the main branch). It
+needs `contents: write` to be able to create the tag in manual mode.
+
+It is a single file for both modes because npm accepts only one workflow as *Trusted
+Publisher* per package, and identifies it by the name of the file that calls the
+shared workflow.
 
 [!--lang:*-->
 
 ```yaml
-name: Publish from tag
+name: Publish
 
 on:
   push:
     tags:
       - 'v[0-9]+.[0-9]*'
-
-permissions:
-  id-token: write
-  contents: read
-
-jobs:
-  publish:
-    uses: codenautas/.github/.github/workflows/npm-publish-new-version.yaml@v2
-    with:
-      node_version: '24'
-```
-
-<!--lang:es-->
-
-### `publish-manual.yml`
-
-El mismo workflow compartido, pero disparado a mano y creando el tag. Necesita
-`contents: write` justamente para poder crearlo.
-
-<!--lang:en--]
-
-### `publish-manual.yml`
-
-The same shared workflow, but triggered by hand and creating the tag. It needs
-`contents: write` precisely to be able to create it.
-
-[!--lang:*-->
-
-```yaml
-name: Publish (manual)
-
-on:
   workflow_dispatch:
+    inputs:
+      publish_without_testing:
+        description: 'Publicar sin correr los tests'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   id-token: write
@@ -422,8 +468,10 @@ jobs:
   publish:
     uses: codenautas/.github/.github/workflows/npm-publish-new-version.yaml@v2
     with:
-      node_version: '24'
-      create-tag: true
+      node_version: '24.x'
+      publish_without_testing: ${{ inputs.publish_without_testing == true }}
+      postgres: ''
+      create-tag: ${{ github.event_name == 'workflow_dispatch' }}
 ```
 
 <!--lang:es-->
@@ -470,7 +518,7 @@ jobs:
     with:
       bump: ${{ inputs.bump }}
       preid: ${{ inputs.preid }}
-      node_version: '24'
+      node_version: '24.x'
 ```
 
 <!--lang:es-->

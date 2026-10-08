@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   publish:
-    uses: codenautas/.github/.github/workflows/npm-publish-new-version.yaml@v2
+    uses: codenautas/.github/.github/workflows/npm-publish-new-version.yaml@v3
     with:
       node_version: '24.x'
       publish_without_testing: ${{ inputs.publish_without_testing == true }}

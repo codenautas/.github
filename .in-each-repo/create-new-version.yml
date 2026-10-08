@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   create-new-version:
-    uses: codenautas/.github/.github/workflows/create-new-version.yaml@v2
+    uses: codenautas/.github/.github/workflows/create-new-version.yaml@v3
     with:
       bump: ${{ inputs.bump }}
       preid: ${{ inputs.preid }}

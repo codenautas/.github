@@ -2,7 +2,7 @@
 setlocal
 rem El tag vigente de los shared workflows. Cambiarlo solo en el proximo breaking change.
 rem v1 quedo congelado para los repos que todavia no migraron.
-set "TAG=v2"
+set "TAG=v3"
 
 git tag -f "%TAG%"
 if errorlevel 1 exit /b 1

@@ -1,5 +1,5 @@
 name: Node.js CI build and test
-description: Build and test npm node.js repositories in current and LTS. Needs `npm ci` and `npm test` in place.
+description: Build and test npm node.js repositories in current and LTS. Needs `npm ci` and `npm test` in place. If the `test-navigator` script exists it is also run (tests in Chrome and Firefox, see `server4test --run-browser`).
 
 on:
   workflow_call:
@@ -34,6 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       node-versions: ${{ steps.filter.outputs.node-versions }}
+      single-version: ${{ steps.filter.outputs.single-version }}
     steps:
     - uses: actions/checkout@v7
     - name: Filtrar las versiones que no acepta engines.node
@@ -63,8 +64,11 @@ jobs:
             console.error(`Error: coverage_version (${coverage_version}) no figura entre las versiones sobre las que se corre (${kept.join(", ")}).`);
             process.exit(1);
           }
+          const newest = kept.reduce((a, b) => semver.gt(semver.minVersion(b), semver.minVersion(a)) ? b : a);
+          const single_version = coverage_version != "no" ? coverage_version : newest;
           console.log(`engines.node: ${engines ?? "(no declarado)"} -> se corre en: ${kept.join(", ")}`);
-          require("fs").appendFileSync(process.env.GITHUB_OUTPUT, `node-versions=${JSON.stringify(kept)}\n`);
+          console.log(`los pasos que se corren una sola vez (ej: test-navigator) se corren en: ${single_version}`);
+          require("fs").appendFileSync(process.env.GITHUB_OUTPUT, `node-versions=${JSON.stringify(kept)}\nsingle-version=${single_version}\n`);
         '
 
   build:
@@ -123,3 +127,6 @@ jobs:
       uses: coverallsapp/github-action@master
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Test in browsers
+      if: ${{ !inputs.skip_tests && matrix.node-version == needs.matrix.outputs.single-version }}
+      run: npm run test-navigator --if-present
